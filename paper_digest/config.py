@@ -28,7 +28,7 @@ class Settings:
     claude_model: str
     summarizer: str
     summary_source: str
-    filter_groups: Dict[str, List[str]]
+    filter_topics: Dict[str, Dict[str, List[str]]]
     interest_keywords: List[str]
     category_icons: Dict[str, str]
 
@@ -55,7 +55,8 @@ def load_settings(path: Path = ROOT / "config.yaml") -> Settings:
         claude_model=raw.get("claude_model", "claude-sonnet-5"),
         summarizer=raw.get("summarizer", "claude_code"),
         summary_source=raw.get("summary_source", "fulltext"),
-        filter_groups=raw.get("filter_groups", {}),
+        # 예전 형식(filter_groups: 그룹 → 패턴)도 주제 1개로 취급해 계속 지원
+        filter_topics=raw.get("filter_topics") or {"Default": raw.get("filter_groups", {})},
         interest_keywords=raw.get("interest_keywords", []),
         category_icons=raw.get("category_icons", {}),
     )

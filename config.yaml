@@ -24,32 +24,59 @@ summarizer: claude_code
 # 요약 입력: fulltext = arXiv HTML 본문 전체(없으면 초록으로 대체), abstract = 초록만
 summary_source: fulltext
 
-# 주제 필터: 모든 그룹에서 최소 1개 패턴이 제목+초록에 매칭돼야 통과 (대소문자 무시, 정규식)
-filter_groups:
-  vla:
-    - 'vision[- ]language[- ]action'
-    - '\bVLAs?\b'
-    - 'embodied (agents?|AI|intelligence|foundation models?)'
-    - 'robot(ic)? (policy|policies|manipulation|foundation models?|agents?|control)'
-    - 'generalist robot'
-    - 'language[- ]conditioned (robot|manipulation|policy)'
-  safety:
-    - 'safety'
-    - '\bsafe(ly|r|guard\w*)?\b'
-    - 'jailbreak\w*'
-    - 'adversarial'
-    - '\battacks?\b'
-    - 'red[- ]team\w*'
-    - 'backdoor\w*'
-    - 'harmful'
-    - '\brisks?\b'
-    - 'guardrails?'
-    - 'hazard\w*'
-    - 'adversarial robustness|robust(ness)? (to|against) (attacks?|perturbations?)'
-    - 'misalign\w*|(safety|value|human) alignment|aligned with human'
-    - 'collision[- ]avoid\w*|constraint violations?'
-    - 'unsafe'
-    - 'trustworth\w*'
+# 주제 필터 (대소문자 무시, 정규식, 제목+초록 대상)
+# - 주제(topic)가 여러 개면 그중 하나만 만족해도 통과 (OR)
+# - 한 주제 안의 그룹은 모두 최소 1개 패턴이 매칭돼야 함 (AND)
+# 즉 아래 설정은 "VLA AND (safety OR efficiency)"
+# 주제 이름은 노션 '주제' 태그로 그대로 쓰임
+vla_terms: &vla
+  - 'vision[- ]language[- ]action'
+  - '\bVLAs?\b'
+  - 'embodied (agents?|AI|intelligence|foundation models?)'
+  - 'robot(ic)? (policy|policies|manipulation|foundation models?|agents?|control)'
+  - 'generalist robot'
+  - 'language[- ]conditioned (robot|manipulation|policy)'
+
+filter_topics:
+  VLA Safety:
+    vla: *vla
+    safety:
+      - 'safety'
+      - '\bsafe(ly|r|guard\w*)?\b'
+      - 'jailbreak\w*'
+      - 'adversarial'
+      - '\battacks?\b'
+      - 'red[- ]team\w*'
+      - 'backdoor\w*'
+      - 'harmful'
+      - '\brisks?\b'
+      - 'guardrails?'
+      - 'hazard\w*'
+      - 'adversarial robustness|robust(ness)? (to|against) (attacks?|perturbations?)'
+      - 'misalign\w*|(safety|value|human) alignment|aligned with human'
+      - 'collision[- ]avoid\w*|constraint violations?'
+      - 'unsafe'
+      - 'trustworth\w*'
+  VLA Efficiency:
+    # 효율 쪽은 일반 로봇 논문이 너무 많이 걸려서 VLA·로봇 파운데이션 모델로 좁힘
+    vla_strict:
+      - 'vision[- ]language[- ]action'
+      - '\bVLAs?\b'
+      - 'robot(ic)? foundation models?|embodied foundation models?'
+      - 'generalist (robot )?polic(y|ies)|generalist robot'
+      - 'world[- ]action models?|\bWAMs?\b'
+    efficiency:
+      - '(computational(ly)?|inference|memory|parameter|token|compute)[- ]efficien\w*'
+      - 'efficient (inference|VLAs?|policy|policies|architectures?|deployment|decoding)'
+      - '(inference|control|action|end-to-end) latency|low[- ]latency|reduc\w* (the )?latency'
+      - 'inference (speed|time|cost)|real[- ]time (inference|control|execution)'
+      - '\d+(\.\d+)?\s*[x×] (faster|speed(up)?)|speed[- ]?ups? (in|of) inference|inference speed[- ]?up'
+      - 'lightweight (model|VLA|policy|architecture|backbone|variant|network|head|module)|compact (model|policy|VLA)'
+      - 'quantiz\w*|prun(e|ed|ing)\b|knowledge distillation|distill\w* (into|to) (a )?(smaller|compact|lightweight|student)|model compression'
+      - 'token (pruning|reduction|compression|merging|selection|caching)|visual tokens?'
+      - 'KV[- ]cache|early[- ]exit\w*|speculative decoding|parallel decoding'
+      - '\bFLOPs\b|memory footprint|on[- ]device|edge (devices?|deployment)|resource[- ]constrained'
+      - 'accelerat\w* (inference|decoding|the model)'
 
 # 관련도 점수(1~5)를 매길 때 Claude가 참고하는 내 관심 키워드
 interest_keywords:
@@ -60,6 +87,8 @@ interest_keywords:
   - red-teaming robotic foundation models
   - physical harm prevention
   - alignment of embodied AI
+  - VLA efficiency (inference latency, token pruning, quantization, distillation)
+  - lightweight / real-time VLA deployment on edge devices
 
 # 대표 카테고리별 페이지 아이콘
 category_icons:

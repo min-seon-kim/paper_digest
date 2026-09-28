@@ -56,14 +56,18 @@ def run(args: argparse.Namespace) -> int:
     # 1) 수집 + 필터
     papers = fetch_recent_papers(settings.categories, settings.lookback_hours)
     log.info("최근 %d시간 %s 논문 %d편 수집", settings.lookback_hours, settings.categories, len(papers))
-    candidates = filter_papers(papers, settings.filter_groups)
-    log.info("주제 필터 통과: %d편", len(candidates))
+    candidates = filter_papers(papers, settings.filter_topics)
+    log.info("주제 필터 통과: %d편 (%s)", len(candidates), ", ".join(
+        f"{t} {sum(t in p.topics for p in candidates)}편" for t in settings.filter_topics))
 
     # 2) 노션 중복 제거 후 상한 적용
     notion = data_source_id = None
     if not args.dry_run:
         notion = NotionClient(settings.notion_token)
         data_source_id = notion.data_source_id(settings.notion_database_id)
+        added = notion.ensure_properties(data_source_id)
+        if added:
+            log.info("노션 DB에 새 속성 추가: %s", ", ".join(added))
         since = (datetime.now(timezone.utc) - timedelta(hours=settings.lookback_hours + 48)).date()
         existing = notion.existing_arxiv_urls(data_source_id, since)
         before = len(candidates)
@@ -89,7 +93,7 @@ def run(args: argparse.Namespace) -> int:
                 paper.fulltext = fetch_fulltext(paper.arxiv_id)
             summary = summarizer.summarize(paper)
             if args.dry_run:
-                print(json.dumps({"arxiv": paper.abs_url, "citations": paper.citation_count,
+                print(json.dumps({"arxiv": paper.abs_url, "topics": paper.topics, "citations": paper.citation_count,
                                   "max_author_citations": paper.max_author_citations,
                                   **summary.model_dump()}, ensure_ascii=False, indent=2))
                 continue

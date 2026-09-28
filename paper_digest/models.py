@@ -21,6 +21,7 @@ class Paper:
     pdf_url: str
     filter_score: int = 0
     matched_terms: List[str] = field(default_factory=list)
+    topics: List[str] = field(default_factory=list)  # 필터에서 매칭된 주제 (예: "VLA Safety")
 
     # Semantic Scholar 보강 정보
     citation_count: Optional[int] = None

@@ -28,6 +28,9 @@ P_PDF = "PDF"
 P_CITATIONS = "인용수"
 P_AUTHOR_CITES = "저자 최대 인용수"
 P_ONE_LINER = "한 줄 요약"
+P_TOPIC = "주제"
+
+TOPIC_COLORS = ["red", "green", "purple", "blue", "orange", "pink", "brown", "yellow"]
 
 RELEVANCE_OPTIONS = [
     ("5 · 매우 높음", "red"),
@@ -48,6 +51,7 @@ def database_properties_schema() -> Dict[str, Any]:
         P_TITLE: {"title": {}},
         P_ONE_LINER: {"rich_text": {}},
         P_RELEVANCE: {"select": {"options": [{"name": n, "color": c} for n, c in RELEVANCE_OPTIONS]}},
+        P_TOPIC: {"multi_select": {"options": []}},
         P_AUTHORS: {"rich_text": {}},
         P_DATE: {"date": {}},
         P_CATEGORY: {"multi_select": {"options": []}},
@@ -141,6 +145,15 @@ class NotionClient:
                 (k for k, v in props.items() if v.get("type") == "title"), P_TITLE)
         return self._title_cache[data_source_id]
 
+    def ensure_properties(self, data_source_id: str) -> List[str]:
+        """스키마에 없는 속성을 추가하고 추가된 이름 목록을 반환 (제목 속성은 건드리지 않음)."""
+        props = self._call("GET", f"/data_sources/{data_source_id}").get("properties", {})
+        missing = {k: v for k, v in database_properties_schema().items()
+                   if k not in props and "title" not in v}
+        if missing:
+            self._call("PATCH", f"/data_sources/{data_source_id}", json={"properties": missing})
+        return list(missing)
+
     def database_parent_page_id(self, database_id: str) -> Optional[str]:
         parent = self.get_database(database_id).get("parent", {})
         return parent.get("page_id")
@@ -170,6 +183,7 @@ class NotionClient:
             self.title_property(data_source_id): {"title": text(paper.title)},
             P_ONE_LINER: {"rich_text": text(summary.one_line_summary)},
             P_RELEVANCE: {"select": {"name": relevance_label(summary.relevance_score)}},
+            P_TOPIC: {"multi_select": [{"name": _tag(t)} for t in paper.topics]},
             P_AUTHORS: {"rich_text": text(", ".join(paper.authors)[:TEXT_LIMIT])},
             P_DATE: {"date": {"start": paper.published.date().isoformat()}},
             P_CATEGORY: {"multi_select": [{"name": _tag(c)} for c in paper.categories]},
@@ -202,6 +216,8 @@ def _meta_line(paper: Paper) -> List[Dict[str, Any]]:
     parts: List[Dict[str, Any]] = []
     parts += text("📅 ") + text(paper.published.date().isoformat())
     parts += text("   ·   📑 ") + text(paper.primary_category, bold=True)
+    if paper.topics:
+        parts += text("   ·   🏷️ ") + text(" / ".join(paper.topics), bold=True)
     if paper.citation_count is not None:
         parts += text(f"   ·   📈 인용 {paper.citation_count}회")
     if paper.max_author_hindex is not None:
@@ -264,7 +280,8 @@ def digest_blocks(items: List[ProcessedPaper], failed: int) -> List[Dict[str, An
                 block("paragraph", text(x.summary.one_line_summary)),
                 block("paragraph", text("arXiv", url=x.paper.abs_url, color="blue")
                       + text("  ·  ") + text("PDF", url=x.paper.pdf_url, color="blue")
-                      + text(f"  ·  {x.paper.primary_category}", color="gray")),
+                      + text(f"  ·  {x.paper.primary_category}"
+                             + (f"  ·  {' / '.join(x.paper.topics)}" if x.paper.topics else ""), color="gray")),
             ],
         ))
     return blocks

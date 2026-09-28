@@ -6,7 +6,7 @@ import re
 import sys
 
 from .config import ENV_PATH, load_settings
-from .notion_api import NotionClient, database_properties_schema
+from .notion_api import NotionClient
 
 
 def write_env(key: str, value: str) -> None:
@@ -37,11 +37,8 @@ def main() -> None:
             sys.exit(f"기존 NOTION_DATABASE_ID에 접근 실패: {exc}\n"
                      "통합이 데이터베이스에 연결됐는지 확인하거나 --force로 새로 만드세요.")
         # 기존 DB에 빠진 속성이 있으면 추가 (속성 이름이 같으면 그대로 둠)
-        ds = notion._call("GET", f"/data_sources/{ds_id}")
-        missing = {k: v for k, v in database_properties_schema().items()
-                   if k not in ds.get("properties", {}) and "title" not in v}
+        missing = notion.ensure_properties(ds_id)
         if missing:
-            notion._call("PATCH", f"/data_sources/{ds_id}", json={"properties": missing})
             print(f"누락된 속성 추가: {', '.join(missing)}")
         print(f"✅ 기존 데이터베이스 사용: {s.notion_database_id}")
         return

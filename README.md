@@ -1,6 +1,6 @@
 # 📚 Paper Digest — arXiv 논문 자동 요약 → 노션
 
-매일 arXiv에서 관심 분야(기본값: **VLA safety**) 신규 논문을 모아 Claude로 **본문 전체를 읽고** 한국어 요약을 만들고, 노션 데이터베이스와 "오늘의 논문 다이제스트" 페이지로 정리합니다.
+매일 arXiv에서 관심 분야(기본값: **VLA safety**, **VLA efficiency**) 신규 논문을 모아 Claude로 **본문 전체를 읽고** 한국어 요약을 만들고, 노션 데이터베이스와 "오늘의 논문 다이제스트" 페이지로 정리합니다.
 
 요약은 기본적으로 **Claude Code CLI + Claude 구독(Pro/Max)** 으로 돌아가서 별도 API 키나 API 요금이 들지 않습니다. 원하면 Anthropic API 키 방식으로 바꿀 수 있습니다.
 
@@ -16,6 +16,7 @@ arXiv API ─▶ 주제 필터 ─▶ 노션 중복 제거 ─▶ Semantic Schol
 |---|---|---|
 | 제목 | 제목 | 논문 제목 |
 | 한 줄 요약 | 텍스트 | 표 보기에서 바로 볼 수 있게 |
+| 주제 | 다중 선택 | 필터에서 매칭된 주제 (`VLA Safety`, `VLA Efficiency`) |
 | 관련도 | 선택 | `5 · 매우 높음`(빨강) → `1 · 무관`(회색) 색상 구분 |
 | 저자 | 텍스트 | |
 | 발행일 | 날짜 | arXiv v1 제출일 |
@@ -139,7 +140,7 @@ python -m paper_digest.main --lookback-hours 168 --limit 5
 | `claude_model` | 요약 모델 (기본 `claude-sonnet-5`) |
 | `summarizer` | `claude_code`(구독, 기본) 또는 `api`(API 키) |
 | `summary_source` | `fulltext`(arXiv HTML 본문 전체, 기본) 또는 `abstract`(초록만 — 빠르고 사용량 적음) |
-| `filter_groups` | 주제 필터. **모든 그룹**에서 정규식이 최소 1개씩 매칭돼야 통과합니다(기본: `vla` 그룹 AND `safety` 그룹). |
+| `filter_topics` | 주제 필터. 주제끼리는 **OR**, 한 주제 안의 그룹끼리는 **AND**입니다. 기본값은 `VLA Safety`(VLA AND safety) 또는 `VLA Efficiency`(VLA AND 추론 효율·경량화)이고, 주제 이름이 노션 `주제` 태그가 됩니다. 새 주제를 추가하면 다음 실행 때 자동으로 반영됩니다. |
 | `interest_keywords` | Claude가 관련도(1~5)를 매길 때 기준으로 삼는 관심 키워드 |
 | `category_icons` | 카테고리별 페이지 아이콘 |
 
@@ -181,7 +182,7 @@ paper-digest/
 |---|---|
 | `Could not find database/page ... Make sure the relevant pages and databases are shared with your integration` | 1-2의 5번 단계(페이지에 통합 연결)를 하지 않은 경우입니다. |
 | `환경변수 누락` | `.env` 또는 GitHub Secrets 이름 오타를 확인하세요. |
-| 매일 0편 | 필터가 너무 좁은 경우입니다. `--dry-run --lookback-hours 168`로 확인해 보고, `categories`에 `cs.RO`를 추가하거나 `filter_groups`를 넓혀 보세요. |
+| 매일 0편 | 필터가 너무 좁은 경우입니다. `--dry-run --lookback-hours 168`로 확인해 보고, `filter_topics`의 패턴을 넓히거나 주제를 추가해 보세요. |
 | `Claude Code CLI를 찾을 수 없습니다` | `npm i -g @anthropic-ai/claude-code`로 설치하거나 `.env`에 `CLAUDE_CLI=/경로/claude` 지정 |
 | 요약이 `usage limit`으로 실패 | 구독 사용량 한도입니다. `max_papers_per_day`를 줄이거나 `summary_source: abstract`로 바꾸세요. |
 | S2 인용수가 비어 있음 | 막 나온 논문은 Semantic Scholar에 아직 색인되지 않았을 수 있습니다(정상). |

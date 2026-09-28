@@ -1,0 +1,65 @@
+name: Daily Paper Digest
+
+on:
+  schedule:
+    # 매일 한국 시간(KST, UTC+9) 오전 8시 = 전날 UTC 23:00
+    - cron: "0 23 * * *"
+  workflow_dispatch:
+    inputs:
+      lookback_hours:
+        description: "최근 몇 시간 논문을 볼지 (비우면 config.yaml 값)"
+        required: false
+      limit:
+        description: "최대 처리 논문 수 (비우면 config.yaml 값)"
+        required: false
+
+concurrency:
+  group: paper-digest
+  cancel-in-progress: false
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    # 전문 요약은 1편당 약 2분 → 15편이면 30~40분
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      # 요약 백엔드(summarizer: claude_code)용 Claude Code CLI
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm install -g @anthropic-ai/claude-code
+
+      - name: Run digest
+        env:
+          # Claude 구독 인증 토큰 (`claude setup-token`으로 발급). API 키 불필요
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # summarizer: api 모드를 쓸 때만 필요
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
+          NOTION_DIGEST_PARENT_PAGE_ID: ${{ secrets.NOTION_DIGEST_PARENT_PAGE_ID }}
+          S2_API_KEY: ${{ secrets.S2_API_KEY }}
+          LOOKBACK: ${{ github.event.inputs.lookback_hours }}
+          LIMIT: ${{ github.event.inputs.limit }}
+        run: |
+          ARGS=""
+          [ -n "$LOOKBACK" ] && ARGS="$ARGS --lookback-hours $LOOKBACK"
+          [ -n "$LIMIT" ] && ARGS="$ARGS --limit $LIMIT"
+          python -m paper_digest.main $ARGS
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-${{ github.run_id }}
+          path: logs/*.log
+          retention-days: 14

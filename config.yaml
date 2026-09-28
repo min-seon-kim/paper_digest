@@ -1,0 +1,73 @@
+# 수집 대상 arXiv 카테고리
+categories:
+  - cs.CL
+  - cs.AI
+  - cs.RO
+
+# 몇 시간 분량의 논문을 볼지. 기준점은 '지금'이 아니라 arXiv API에 올라온 가장 최신 논문의 제출 시각.
+# (arXiv는 제출 후 발표까지 하루~사흘 지연이 있어서, 지금부터 세면 아직 발표 안 된 구간만 보게 됨)
+# 월요일 발표분은 금~월 72시간치가 한 번에 나오므로 72를 권장. 노션 중복 체크가 있어서
+# 겹치는 구간의 논문이 두 번 들어가지는 않음. 엄격히 24시간만 원하면 24로 바꾸면 됨.
+lookback_hours: 72
+
+# 하루 최대 처리 논문 수
+max_papers_per_day: 15
+
+# 요약에 쓸 Claude 모델
+claude_model: claude-sonnet-5
+
+# 요약 백엔드
+#   claude_code: Claude Code CLI + Claude 구독(Pro/Max) 인증 — API 키 불필요 (기본)
+#   api:         Anthropic API 직접 호출 — ANTHROPIC_API_KEY 필요
+summarizer: claude_code
+
+# 요약 입력: fulltext = arXiv HTML 본문 전체(없으면 초록으로 대체), abstract = 초록만
+summary_source: fulltext
+
+# 주제 필터: 모든 그룹에서 최소 1개 패턴이 제목+초록에 매칭돼야 통과 (대소문자 무시, 정규식)
+filter_groups:
+  vla:
+    - 'vision[- ]language[- ]action'
+    - '\bVLAs?\b'
+    - 'embodied (agents?|AI|intelligence|foundation models?)'
+    - 'robot(ic)? (policy|policies|manipulation|foundation models?|agents?|control)'
+    - 'generalist robot'
+    - 'language[- ]conditioned (robot|manipulation|policy)'
+  safety:
+    - 'safety'
+    - '\bsafe(ly|r|guard\w*)?\b'
+    - 'jailbreak\w*'
+    - 'adversarial'
+    - '\battacks?\b'
+    - 'red[- ]team\w*'
+    - 'backdoor\w*'
+    - 'harmful'
+    - '\brisks?\b'
+    - 'guardrails?'
+    - 'hazard\w*'
+    - 'adversarial robustness|robust(ness)? (to|against) (attacks?|perturbations?)'
+    - 'misalign\w*|(safety|value|human) alignment|aligned with human'
+    - 'collision[- ]avoid\w*|constraint violations?'
+    - 'unsafe'
+    - 'trustworth\w*'
+
+# 관련도 점수(1~5)를 매길 때 Claude가 참고하는 내 관심 키워드
+interest_keywords:
+  - VLA safety
+  - vision-language-action models
+  - jailbreak / adversarial attacks on embodied agents
+  - safe robot policy learning
+  - red-teaming robotic foundation models
+  - physical harm prevention
+  - alignment of embodied AI
+
+# 대표 카테고리별 페이지 아이콘
+category_icons:
+  cs.CL: "💬"
+  cs.AI: "🤖"
+  cs.RO: "🦾"
+  cs.CV: "👁️"
+  cs.LG: "📈"
+  cs.CR: "🔐"
+  cs.HC: "🧑‍💻"
+  default: "📄"
